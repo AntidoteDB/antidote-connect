@@ -147,11 +147,15 @@ func runConnectDcs(connectDcs []antidote.Host) (err error) {
 	for i, host := range connectDcs {
 		wg.Add(1)
 		go func(i int, host antidote.Host) {
+			defer wg.Done()
+
 			client, err := antidote.NewClient(host)
 			if err != nil {
-				errors <- fmt.Errorf("Could not connect to Antidote at %s:%d", host.Name, host.Port)
+				debug("%s", err.Error())
+				errors <- err
 				return
 			}
+			debug("Connection to %s:%d established. Getting connection descriptor.", host.Name, host.Port)
 
 			descriptor, err := client.GetConnectionDescriptor()
 
@@ -160,7 +164,6 @@ func runConnectDcs(connectDcs []antidote.Host) (err error) {
 			clients[i] = client
 			descriptors[i] = descriptor
 			lock.Unlock()
-			wg.Done()
 		}(i, host)
 	}
 	wg.Wait()
